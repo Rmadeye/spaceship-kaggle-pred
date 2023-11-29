@@ -1,0 +1,1 @@
+Simple classificator for kaggle spaceship competition
