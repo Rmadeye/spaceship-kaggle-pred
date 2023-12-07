@@ -50,7 +50,6 @@ def train_model(args: argparse.Namespace):
     data_dir = args.data_dir
     hparams = args.hparams
     device = args.device
-    model_dir = os.path.join(args.model_dir, 'model.pt')
 
     X = torch.load(os.path.join(data_dir, 'X.pt'))
     y = torch.load(os.path.join(data_dir, 'y.pt'))
@@ -66,9 +65,9 @@ def train_model(args: argparse.Namespace):
 
     net = Network(input_dim=X.shape[1],**network_hparams).to(device)
 
-    if args.model_dir:
-        print('loading model from', model_dir)
-        net.load_state_dict(torch.load(os.path.join(model_dir, 'model.pt'))['state_dict'])
+    if args.model_path:
+        print('loading model from', args.model_path)
+        net.load_state_dict(torch.load(args.model_path)['state_dict'])
 
     print(f'Loading data from {data_dir}')
     print(f'Loading hyperparameters from {hparams}')
@@ -84,7 +83,7 @@ def train_model(args: argparse.Namespace):
     n_epochs = train_params['epochs']
     scaler = torch.cuda.amp.GradScaler()
     loss = float('inf')
-    best_test_error = 0.75
+    best_test_error = 0.65
     num_epochs_without_gain = 0
     for epoch in range(n_epochs):
         net.train()
@@ -190,7 +189,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train baseline model')
     parser.add_argument('--data_dir', type=str, default='/home/rmadeye/kaggle/spaceship/data/inputs')
     parser.add_argument('--hparams', type=str, default='hparams/hparams.yaml')
-    parser.add_argument('--model_dir', type=str, default='models')
+    parser.add_argument('--model_path', type=str, default='models')
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--output_dir', type=str, default='saved_models')
     args = parser.parse_args()

@@ -29,7 +29,7 @@ def predict(args: argparse.Namespace):
     # loading passenger ids
     passenger_ids = np.load('/home/rmadeye/kaggle/spaceship/data/inputs/passids.npy',
                              allow_pickle=True)
-    output = pd.DataFrame({'Transported': results,'passenger_id': passenger_ids})
+    output = pd.DataFrame({'Transported': results,'PassengerId': passenger_ids})
     output['Transported'] = output['Transported'].astype(bool)
     output.to_csv('submission.csv', index=False)
 
