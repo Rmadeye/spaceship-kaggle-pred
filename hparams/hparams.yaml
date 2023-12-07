@@ -1,0 +1,11 @@
+network:
+  hidden_dim: 128
+  dropout: 0.33
+train:
+  lr: 1e-4
+  epochs: 500
+  random_seed: 2137
+  lr_patience: 5 # use on test data
+  weight_decay: 0
+  early_stopping: 100
+  batch_size: 64

@@ -6,11 +6,43 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import CyclicLR
+from torch.utils.data import DataLoader, Dataset
+from torch.optim.lr_scheduler import CyclicLR, ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
 
 from network.models.baseline import BaseShip as Network
+
+class MyDataset(Dataset):
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
+
+def prepare_data(data_dir: str,
+                 batch_size: int,
+                 ):
+    print(data_dir)
+    X = torch.load(os.path.join(data_dir, 'X.pt'))
+    y = torch.load(os.path.join(data_dir, 'y.pt'))
+    X_val = torch.load(os.path.join(data_dir, 'X_val.pt'))
+    y_val = torch.load(os.path.join(data_dir, 'y_val.pt'))
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=2137)
+
+    train_dataset = MyDataset(X_train, y_train)
+    test_dataset = MyDataset(X_test, y_test)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(MyDataset(X_val, y_val), batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader, val_loader
+
+
 
 
 
@@ -23,6 +55,8 @@ def train_model(args: argparse.Namespace):
     X = torch.load(os.path.join(data_dir, 'X.pt'))
     y = torch.load(os.path.join(data_dir, 'y.pt'))
 
+
+
     print("Data shapes (X, y)",X.shape, y.shape)
 
     with open(hparams, 'r') as f:
@@ -30,7 +64,7 @@ def train_model(args: argparse.Namespace):
         network_hparams = hparams['network']
         train_params = hparams['train']
 
-    net = Network(**network_hparams).to(device)
+    net = Network(input_dim=X.shape[1],**network_hparams).to(device)
 
     if args.model_dir:
         print('loading model from', model_dir)
@@ -43,20 +77,29 @@ def train_model(args: argparse.Namespace):
     optimizer = optim.Adam(net.parameters(), lr=float(train_params['lr']))
     # step_size_up = len(train_loader) * 2  # Number of iterations to increase the learning rate
     # step_size_down = len(train_loader) * 2  # Number of iterations to decrease the learning rate
-    # scheduler = CyclicLR(optimizer, base_lr=1e-5, max_lr=1e-3, step_size_up=step_size_up, step_size_down=step_size_down, mode='triangular')
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=train_params['random_seed'])
-    train_loader = DataLoader([(x, y) for x, y in zip(X_train, y_train)],shuffle=True)
-    test_loader = DataLoader([(x, y) for x, y in zip(X_test, y_test)], shuffle=True)
+    scheduler = CyclicLR(optimizer, base_lr=float(train_params['lr']), max_lr=float(train_params['lr']) * 10, cycle_momentum=False)
 
 
+    train_loader, test_loader, val_loader = prepare_data(data_dir, train_params['batch_size'])
     n_epochs = train_params['epochs']
     scaler = torch.cuda.amp.GradScaler()
-    for epoch in range(train_params['epochs']):
+    loss = float('inf')
+    best_test_error = 0.75
+    num_epochs_without_gain = 0
+    for epoch in range(n_epochs):
         net.train()
-        train_loss = 0.0
 
-        for i, (inputs, labels) in enumerate(train_loader):
+        train_loss = 0.0
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
             inputs, labels = inputs.float().to(device), labels.float().to(device)
+            # print(inputs.shape,  labels.shape)
+
+            
+            # breakpoint()
+
+            inputs, labels = inputs.float().to(device), labels.float().to(device)
+            # breakpoint()
 
             # Zero the parameter gradients
             optimizer.zero_grad()
@@ -65,7 +108,9 @@ def train_model(args: argparse.Namespace):
             with torch.cuda.amp.autocast():
                 # Forward pass
                 outputs = net(inputs)
+                # breakpoint()
                 loss = criterion(outputs, labels)
+
 
             # Scales the loss, and calls backward() on the scaled loss to create scaled gradients.
             scaler.scale(loss).backward()
@@ -78,10 +123,14 @@ def train_model(args: argparse.Namespace):
 
             # Updates the scale for next iteration.
             scaler.update()
-
-            train_loss += loss.item() * inputs.size(0)
-
+            # breakpoint()
+            
+            train_loss += loss.item()
+            # breakpoint()
+        scheduler.step(train_loss)
+        # breakpoint()
         train_loss = train_loss / len(train_loader.dataset)
+
 
         net.eval()
         correct = 0
@@ -98,7 +147,43 @@ def train_model(args: argparse.Namespace):
 
         accuracy = correct / total
 
+            # Checkpointing and early stopping based on test error
+
+        print(f"Current acc vs best acc: {round(accuracy,2)} vs {round(best_test_error,2)}")
+        if best_test_error < accuracy:
+            best_test_error = accuracy
+            checkpoint_dir = os.path.join(args.output_dir)
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            torch.save(
+                {'state_dict' :net.state_dict(),
+                'hparams' : hparams,
+                'trainstats': {'epoch': epoch,
+                                'accuracy': accuracy,
+                                'loss': loss }},
+                os.path.join(checkpoint_dir, f'model_2.pt')
+                )                                       
+            num_epochs_without_gain = 0
+        else:
+            num_epochs_without_gain += 1
+        if num_epochs_without_gain >= train_params['early_stopping']:
+            print(f'early stopping after {epoch}')
+            break
+
         print(f'Epoch: {epoch+1}/{n_epochs}, Loss: {train_loss:.4f}, Accuracy: {accuracy*100:.2f}%')
+    # now validation on val set
+    net.eval()
+    correct = 0
+    total = 0
+    for inputs, labels in val_loader:
+        inputs, labels = inputs.float().to(device), labels.to(device)
+
+        outputs = net(inputs)
+        predicted = (outputs > 0.5).float()
+
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+    print(f'Accuracy on validation set: {correct / total * 100:.2f}%')
 
 
 if __name__ == '__main__':
@@ -107,5 +192,6 @@ if __name__ == '__main__':
     parser.add_argument('--hparams', type=str, default='hparams/hparams.yaml')
     parser.add_argument('--model_dir', type=str, default='models')
     parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--output_dir', type=str, default='saved_models')
     args = parser.parse_args()
     train_model(args)
