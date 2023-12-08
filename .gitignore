@@ -3,3 +3,5 @@ old/*
 notebook.ipynb
 *.csv
 *.ipynb
+wandb/*
+hparams/wandb/
