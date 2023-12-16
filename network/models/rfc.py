@@ -1,5 +1,6 @@
 import os
 import argparse
+import joblib
 
 import torch
 from sklearn.model_selection import train_test_split
@@ -36,7 +37,8 @@ def train_rfc(
         ccp_alpha: float,
         bootstrap: bool,
         use_scaler: bool = True,
-        wandb_log: bool = False) -> tuple:
+        wandb_log: bool = False,
+        save_model: bool =  False) -> tuple:
     
     max_features = None if max_features == 0 else 'sqrt' if max_features == 1 else 'log2'
     class_weight = None if class_weight == 0 else 'balanced' if class_weight == 1 else 'balanced_subsample'
@@ -73,8 +75,12 @@ def train_rfc(
     if wandb_log:
         wandb.log(results)
 
+
     model = {'model': rfc,
              'scaler': scaler}
+    print(model)
+    if save_model:
+        joblib.dump(model, os.path.join('/home/rmadeye/kaggle/spaceship/data/outputs', 'rfc.joblib'), compress=0)
     
     return results, model
 

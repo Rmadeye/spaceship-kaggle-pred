@@ -2,7 +2,7 @@
 
 hparams=hparams/hparams.yaml
 device=cuda
-data=/home/rmadeye/kaggle/spaceship/data/inputs/augmented_dropna/
+data=data/inputs/new_base
 output_dir=/home/rmadeye/kaggle/spaceship/data/outputs
 # model_dir='/home/rmadeye/kaggle/spaceship/data/outputs/model.pt'
 EXEC=simple_clf.py
