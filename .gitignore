@@ -5,3 +5,5 @@ subm*.csv
 *.ipynb
 wandb/*
 hparams/wandb/
+*pt
+*txt

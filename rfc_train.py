@@ -5,7 +5,7 @@ from network.models.rfc import train_rfc
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='/home/rmadeye/kaggle/spaceship/data/inputs/new_base/')
+    parser.add_argument('--data_dir', type=str, default='/home/rmadeye/kaggle/spaceship/data/inputs/knnfill/')
     parser.add_argument('--n_estimators', type=int, default=100)
     parser.add_argument('--max_depth', type=int, default=100)
     parser.add_argument('--criterion', type=str, default='gini')
