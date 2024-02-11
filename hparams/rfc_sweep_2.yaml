@@ -1,0 +1,22 @@
+program: ../rfc_train.py
+method: grid
+metric:
+  name: accuracy
+  goal: maximize
+parameters:
+  n_estimators:
+    values: [20,50,100,150]
+  max_depth:
+    values: [20,50,80,100]
+  criterion:
+    values: ['gini', 'entropy']
+  class_weight:
+    values: [0, 1, 2]
+  max_features:
+    values: [0, 1, 2]
+  ccp_alpha:
+    values: [0]
+  bootstrap:
+    values: [1]
+  use_scaler:
+    values: [0,1]

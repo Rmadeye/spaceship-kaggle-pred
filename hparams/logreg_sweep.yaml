@@ -1,0 +1,18 @@
+program: ../ml_model_train.py
+method: grid
+metric:
+  name: accuracy
+  goal: maximize
+parameters:
+  C:
+    values: [1, 2, 5, 10, 20]
+  penalty:
+    values: [1]
+  solver:
+    values: ['liblinear', 'newton-cg', 'sag', 'lbfgs', 'newton-cholesky']
+  multi_class:
+    values: ['ovr', 'multinomial']
+  class_weight:
+    values: [0, 1]
+  use_scaler:
+    values: [0, 1]

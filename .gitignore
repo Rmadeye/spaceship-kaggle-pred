@@ -1,5 +1,9 @@
 old/*
 *__pycache__*
 notebook.ipynb
-*.csv
+subm*.csv
 *.ipynb
+wandb/*
+hparams/wandb/
+*pt
+*txt

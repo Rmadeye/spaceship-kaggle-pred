@@ -1,0 +1,18 @@
+program: ../knn_train.py
+method: grid
+metric:
+  name: accuracy
+  goal: maximize
+parameters:
+  n_neighbors:
+    values: [5,10,20,40,50]
+  weights:
+    values: [0,1]
+  algorithm:
+    values: [0,1,2]
+  leaf_size:
+    values: [10,30,50,100]
+  p:
+    values: [1,2]
+  use_scaler:
+    values: [0, 1]

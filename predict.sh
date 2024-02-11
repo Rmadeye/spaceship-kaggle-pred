@@ -1,6 +1,6 @@
 #!/bin/bash
 
-data_dir=data/inputs/augmented_fill/
+data_dir=data/inputs/knnfill
 model_path=data/outputs/model_2.pt
 hparams=hparams/hparams.yaml
 

@@ -1,15 +1,15 @@
 network:
   hidden_dim: 128
-  dropout: 0.33
-  num_layers: 6
+  dropout: 0.4
+  num_layers: 2
 train:
-  lr: 0.0001
-  epochs: 500
-  random_seed: 2137
-  lr_patience: 10 # use on test data
-  weight_decay: 0
-  early_stopping: 200
-  batch_size: 64
+  lr: 0.001
+  epochs: 250
+  random_seed: 666
+  lr_patience: 50 # use on test data
+  weight_decay: 0.000
+  early_stopping: 100
+  batch_size: 128
 
 
 #  optimum hyperparameters

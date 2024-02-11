@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import CyclicLR, ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
+import wandb
 
 from network.models.baseline import BaseShip as Network
 
@@ -50,6 +51,8 @@ def train_model(args: argparse.Namespace):
     data_dir = args.data_dir
     hparams = args.hparams
     device = args.device
+    # if args.wandb_log:
+    #     wandb.init(project="ai-kaggle-titanic", entity="rafal-madaj")
 
     X = torch.load(os.path.join(data_dir, 'X.pt'))
     y = torch.load(os.path.join(data_dir, 'y.pt'))
@@ -72,16 +75,13 @@ def train_model(args: argparse.Namespace):
     print(f'Loading data from {data_dir}')
     print(f'Loading hyperparameters from {hparams}')
     print(f'Using device {device}')
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(net.parameters(), lr=float(train_params['lr']))
-    # step_size_up = len(train_loader) * 2  # Number of iterations to increase the learning rate
-    # step_size_down = len(train_loader) * 2  # Number of iterations to decrease the learning rate
-    scheduler = CyclicLR(optimizer, base_lr=float(train_params['lr']), max_lr=float(train_params['lr']) * 10, cycle_momentum=False)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(net.parameters(), lr=float(train_params['lr']), weight_decay=float(train_params['weight_decay']))
+    scheduler= ReduceLROnPlateau(optimizer, 'min', patience=train_params['lr_patience'], verbose=True)
 
 
     train_loader, test_loader, val_loader = prepare_data(data_dir, train_params['batch_size'])
     n_epochs = train_params['epochs']
-    scaler = torch.cuda.amp.GradScaler()
     loss = float('inf')
     best_test_error = 0.65
     num_epochs_without_gain = 0
@@ -92,44 +92,14 @@ def train_model(args: argparse.Namespace):
         for inputs, labels in train_loader:
             optimizer.zero_grad()
             inputs, labels = inputs.float().to(device), labels.float().to(device)
-            # print(inputs.shape,  labels.shape)
-
-            
-            # breakpoint()
-
-            inputs, labels = inputs.float().to(device), labels.float().to(device)
-            # breakpoint()
-
-            # Zero the parameter gradients
-            optimizer.zero_grad()
-
-            # Use the gradient scaler for the forward and backward passes
-            with torch.cuda.amp.autocast():
-                # Forward pass
-                outputs = net(inputs)
-                # breakpoint()
-                loss = criterion(outputs, labels)
-
-
-            # Scales the loss, and calls backward() on the scaled loss to create scaled gradients.
-            scaler.scale(loss).backward()
-
-            # Unscales the gradients of optimizer's assigned params in-place
-            scaler.unscale_(optimizer)
-
-            # If the gradients contain infs or NaNs, the optimizer.step() is skipped.
-            scaler.step(optimizer)
-
-            # Updates the scale for next iteration.
-            scaler.update()
-            # breakpoint()
-            
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
             train_loss += loss.item()
-            # breakpoint()
-        scheduler.step(train_loss)
-        # breakpoint()
-        train_loss = train_loss / len(train_loader.dataset)
+            loss.backward()
+            optimizer.step()
 
+        train_loss = train_loss / len(train_loader.dataset)
+        scheduler.step(train_loss)
 
         net.eval()
         correct = 0
@@ -183,6 +153,15 @@ def train_model(args: argparse.Namespace):
         correct += (predicted == labels).sum().item()
 
     print(f'Accuracy on validation set: {correct / total * 100:.2f}%')
+    accuracy = round(accuracy*100, 2)
+    val_acc = round(correct / total * 100, 2)
+    results = {'best_epoch_acc': accuracy,
+            'validation_acc': val_acc}
+    # if args.wandb_log:
+    #     wandb.log(results)
+    with open("results_log.txt", "a") as f:
+        f.write(str(results) + "\n")
+        f.write("hparams: " + str(hparams) + "\n")
 
 
 if __name__ == '__main__':
@@ -192,5 +171,6 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default='models')
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--output_dir', type=str, default='saved_models')
+    parser.add_argument('--wandb_log', type=bool, default=False)
     args = parser.parse_args()
     train_model(args)
