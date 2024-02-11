@@ -30,7 +30,8 @@ Model is based on simple linear layers with dropout and batch normalization. It 
 Currently it consists of 3 layers with 128, 32 and 1 neuron, respectively.
 
 ## To do
-[ ] Add predictor for ML  algorithms
-[ ] Add more preprocessing methods
-[ ] Add more models
+[ ] Add predictor for ML  algorithms <br>
+[ ] Add more preprocessing methods <br>
+[ ] Add more models <br>
+
 
