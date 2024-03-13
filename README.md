@@ -1,4 +1,4 @@
-![Python Version](https://img.shields.io/badge/Python-3.12-blue) ![NumPy Version](https://img.shields.io/badge/NumPy-latest-green)![scikit-learn Version](https://img.shields.io/badge/scikit--learn-latest-yellowgreen)![PyTorch Version](https://img.shields.io/badge/PyTorch-newest-red)
+![Python Version](https://img.shields.io/badge/Python-3.12-blue)![NumPy Version](https://img.shields.io/badge/NumPy-latest-green)![scikit-learn Version](https://img.shields.io/badge/scikit--learn-latest-yellowgreen)![PyTorch Version](https://img.shields.io/badge/PyTorch-newest-red)
 ## Spaceship Titanic survival prediction
 
 Repository contains simple model for predicting survival of passengers on Titanic Spaceship competition on kaggle [https://www.kaggle.com/competitions/spaceship-titanic]
