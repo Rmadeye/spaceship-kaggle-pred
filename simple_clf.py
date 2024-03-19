@@ -76,6 +76,7 @@ def train_model(args: argparse.Namespace):
     print(f'Loading hyperparameters from {hparams}')
     print(f'Using device {device}')
     criterion = nn.CrossEntropyLoss()
+    # criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(net.parameters(), lr=float(train_params['lr']), weight_decay=float(train_params['weight_decay']))
     scheduler= ReduceLROnPlateau(optimizer, 'min', patience=train_params['lr_patience'], verbose=True)
 
@@ -94,9 +95,12 @@ def train_model(args: argparse.Namespace):
             inputs, labels = inputs.float().to(device), labels.float().to(device)
             outputs = net(inputs)
             loss = criterion(outputs, labels)
-            train_loss += loss.item()
+            l1_loss = net.l1_loss()
+            total_loss = loss.item() + l1_loss
+            train_loss += total_loss  #loss.item()
             loss.backward()
             optimizer.step()
+        # torch.nn.utils.clip_grad_norm_(net.parameters(), 3)
 
         train_loss = train_loss / len(train_loader.dataset)
         scheduler.step(train_loss)
